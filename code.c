@@ -127,21 +127,28 @@ void buttons(unsigned char key,int x,int y)
 void init()
 {
   glClearColor(0.3,0.3,0.3,0);
-  gluOrtho2D(0,1024,512,0);
+  gluOrtho2D(0,1024,510,0);
   px=300; py=300; pdx=cos(pa)*5; pdy=sin(pa)*5;
+}
+
+void resize(int w,int h)
+{
+  glutReshapeWindow(1024,512);
 }
 
 int main(int argc, char* argv[])
 {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
-  glutInitWindowSize(1024, 512);
+  glutInitWindowSize(1024,510);
+  glutInitWindowPosition(200,200);
   glutCreateWindow("by wisdom a house is built, and through understanding it is established");
   init();
   const GLubyte* version = glGetString(GL_VERSION);
   const GLubyte* profile = glGetString(GL_SHADING_LANGUAGE_VERSION);
   printf("OpenGL version: %s\nProfile: %s\n", version, profile);
   glutDisplayFunc(display);
+  glutReshapeFunc(resize);
   glutKeyboardFunc(buttons);
   glutMainLoop();
 }
