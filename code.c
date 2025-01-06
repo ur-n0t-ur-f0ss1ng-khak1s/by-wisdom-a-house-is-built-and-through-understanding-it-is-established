@@ -62,9 +62,12 @@ typedef struct
  int map; //texture to show
  int x,y,z;
 }sprite; sprite sp[4];
+int depth[120];
 
 void drawSprite()
 {
+ if(px<sp[0].x+30 && px>sp[0].x-30 && py<sp[0].y+30 && py>sp[0].y-30){ sp[0].state=0;} //pick up key
+
  float sx=sp[0].x-px; //temp float variables
  float sy=sp[0].y-py;
  float sz=sp[0].z;
@@ -77,7 +80,19 @@ void drawSprite()
  sx=(sx*108.0/sy)+(120/2); //convert to screen x,y
  sy=(sz*108.0/sy)+( 80/2);
 
- glPointSize(8); glColor3ub(255,255,0); glBegin(GL_POINTS); glVertex2i(sx*8,sy*8); glEnd();
+ int x,y;
+ int scale=32*80/b;
+
+ for(x=sx-scale/2;x<sx+scale/2;x++)
+ {
+  for(y=0;y<scale;y++)
+  {
+   if(sp[0].state==1 && sx>0 && sx<120 && b<depth[x])
+   {
+    glPointSize(8); glColor3ub(255,255,0); glBegin(GL_POINTS); glVertex2i(sx*8,sy*8-y*8); glEnd();
+   }
+  }
+ }
 }
 
 void drawMap2D()
