@@ -55,6 +55,31 @@ int mapC[]=          //ceiling
  0,0,0,0,0,0,0,0,	
 };
 
+typedef struct
+{
+ int type; //static, key, enemy, etc.
+ int state; //on off
+ int map; //texture to show
+ int x,y,z;
+}sprite; sprite sp[4];
+
+void drawSprite()
+{
+ float sx=sp[0].x-px; //temp float variables
+ float sy=sp[0].y-py;
+ float sz=sp[0].z;
+
+ float CS=cos(degToRad(pa)), SN=sin(degToRad(pa)); //rotate around origin
+ float a=sy*CS+sx*SN;
+ float b=sx*CS-sy*SN;
+ sx=a; sy=b;
+
+ sx=(sx*108.0/sy)+(120/2); //convert to screen x,y
+ sy=(sz*108.0/sy)+( 80/2);
+
+ glPointSize(8); glColor3ub(255,255,0); glBegin(GL_POINTS); glVertex2i(sx*8,sy*8); glEnd();
+}
+
 void drawMap2D()
 {
   int x,y,xo,yo;
@@ -204,11 +229,39 @@ void drawSky()
  }
 }
 
+int gameState=0, timer=0;
+float fade=0;
+
+void screen(int v)
+{int x,y;
+ int *T;
+ if(v==1){ T=title;}
+ if(v==2){ T=won;}
+ if(v==3){ T=lost;}
+ for(y=0;y<80;y++)
+ {
+  for(x=0;x<120;x++)
+  {
+    int xo=(int)pa*2-x; if(xo<0){ xo+=120;} xo=xo % 120;
+    int pixel=(y*120+xo)*3;
+    int red   =T[pixel+0]*fade;
+    int green =T[pixel+1]*fade;
+    int blue  =T[pixel+2]*fade;
+    glPointSize(8); glColor3ub(red,green,blue); glBegin(GL_POINTS); glVertex2i(x*8,y*8); glEnd();
+  }
+ }
+ if(fade<1){ fade+=0.001*fps;}
+ if(fade>1){ fade=1;}
+}
+
 void init()
 {
   glClearColor(0.3,0.3,0.3,0);
-  gluOrtho2D(0,960,640,0);
+
   px=300; py=300; pdx=cos(pa)*5; pdy=sin(pa)*5;
+  mapW[19]=4; mapW[26]=4; //close doors
+
+  sp[0].type=1; sp[0].state=1; sp[0].map=0; sp[0].x=1.5*64; sp[0].y=5*64; sp[0].z=0; //sprite 1
 }
 
 float frame1,frame2,fps;
@@ -217,33 +270,43 @@ void display()
 {
   //frames per second
   frame2=glutGet(GLUT_ELAPSED_TIME); fps=(frame2-frame1); frame1=glutGet(GLUT_ELAPSED_TIME); 
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
-  //buttons
-  if(Keys.a==1){ pa+=0.2*fps; pa=FixAng(pa); pdx=cos(degToRad(pa)); pdy=-sin(degToRad(pa));} 	
-  if(Keys.d==1){ pa-=0.2*fps; pa=FixAng(pa); pdx=cos(degToRad(pa)); pdy=-sin(degToRad(pa));} 
+  if(gameState==0){ init(); timer=0; gameState=1;}
+  if(gameState==1){ timer+=1*fps; if(timer>1000){ timer=0; gameState=2;}} //start screen
+  if(gameState==3)
+  {
 
-  int xo=0; if(pdx<0){ xo=-20;} else{ xo=20;}                                    //x offset to check map
-  int yo=0; if(pdy<0){ yo=-20;} else{ yo=20;}                                    //y offset to check map
-  int ipx=px/64.0, ipx_add_xo=(px+xo)/64.0, ipx_sub_xo=(px-xo)/64.0;             //x position and offset
-  int ipy=py/64.0, ipy_add_yo=(py+yo)/64.0, ipy_sub_yo=(py-yo)/64.0;             //y position and offset
-  if(Keys.w==1)                                                                  //move forward
-  {  
-   if(mapW[ipy*mapX        + ipx_add_xo]==0){ px+=pdx*0.2*fps;}
-   if(mapW[ipy_add_yo*mapX + ipx       ]==0){ py+=pdy*0.2*fps;}
+   //buttons
+   if(Keys.a==1){ pa+=0.2*fps; pa=FixAng(pa); pdx=cos(degToRad(pa)); pdy=-sin(degToRad(pa));} 	
+   if(Keys.d==1){ pa-=0.2*fps; pa=FixAng(pa); pdx=cos(degToRad(pa)); pdy=-sin(degToRad(pa));} 
+
+   int xo=0; if(pdx<0){ xo=-20;} else{ xo=20;}                                    //x offset to check map
+   int yo=0; if(pdy<0){ yo=-20;} else{ yo=20;}                                    //y offset to check map
+   int ipx=px/64.0, ipx_add_xo=(px+xo)/64.0, ipx_sub_xo=(px-xo)/64.0;             //x position and offset
+   int ipy=py/64.0, ipy_add_yo=(py+yo)/64.0, ipy_sub_yo=(py-yo)/64.0;             //y position and offset
+   if(Keys.w==1)                                                                  //move forward
+   {  
+    if(mapW[ipy*mapX        + ipx_add_xo]==0){ px+=pdx*0.2*fps;}
+    if(mapW[ipy_add_yo*mapX + ipx       ]==0){ py+=pdy*0.2*fps;}
+   }
+   if(Keys.s==1)                                                                  //move backward
+   { 
+    if(mapW[ipy*mapX        + ipx_sub_xo]==0){ px-=pdx*0.2*fps;}
+    if(mapW[ipy_sub_yo*mapX + ipx       ]==0){ py-=pdy*0.2*fps;}
+   } 
+
+   //drawMap2D();
+   //drawPlayer();
+   drawSky();
+   drawRays3D();
+   drawSprite();
+   if( (int)px>>6==1 && (int)py>>6==1 ){ fade=0; timer=0; gameState=3;}
   }
-  if(Keys.s==1)                                                                  //move backward
-  { 
-   if(mapW[ipy*mapX        + ipx_sub_xo]==0){ px-=pdx*0.2*fps;}
-   if(mapW[ipy_sub_yo*mapX + ipx       ]==0){ py-=pdy*0.2*fps;}
-  } 
+
+  if(gameState==3){ timer+=1*fps; if(timer>1000){ fade=0; timer=0; gameState=0;}} //won screen
 
   glutPostRedisplay();
-  
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
-  //drawMap2D();
-  //drawPlayer();
-  drawSky();
-  drawRays3D();
   glutSwapBuffers();
 }
 
@@ -285,6 +348,7 @@ int main(int argc, char* argv[])
   glutInitWindowSize(960, 640);
   glutInitWindowPosition(glutGet(GLUT_SCREEN_WIDTH)/2-960/2,glutGet(GLUT_SCREEN_HEIGHT)/2-640/2);
   glutCreateWindow("by wisdom a house is built, and through understanding it is established");
+  gluOrtho2D(0,960,640,0);
   init();
   glutDisplayFunc(display);
   glutReshapeFunc(resize);
